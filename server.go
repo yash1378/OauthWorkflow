@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"sync"
 )
 
 type UserInfo struct {
@@ -18,10 +21,26 @@ type UserInfo struct {
 	Provider string `json:"iss"`
 }
 
+type Info struct {
+	Email string `json:"email"`
+	Name  string `json:"name"`
+}
+
+var (
+	a     = 1
+	aLock sync.Mutex
+)
+
 func main() {
-	const googleClientId = process.env.GOOGLE_CLIENT_ID;
-	const googleClientSecret = process.env.GOOGLE_SECRET;
+	googleClientID := "864056163165-6kc1aphrn4hkb28rdb2b0fvr99psnpao.apps.googleusercontent.com"
+	googleClientSecret := "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"
 	redirectURL := "http://localhost:3001/api/auth/google/callback"
+
+	client := redis.NewClient(&redis.Options{
+		Addr:     "redis-18627.c305.ap-south-1-1.ec2.cloud.redislabs.com:18627",
+		Password: "98O8Uq038XwQaMygjKb1JlWBIQm5v6QE", // no password set
+		DB:       0,  // use default DB
+	})
 
 	oauth2Config := &oauth2.Config{
 		ClientID:     googleClientID,
@@ -41,21 +60,69 @@ func main() {
 	router.GET("/api/auth/google/callback", func(c *gin.Context) {
 		code := c.Query("code")
 
-		// Exchange the authorization code for tokens
-		token, err := oauth2Config.Exchange(c, code)
-		if err != nil {
-			c.String(500, "Failed to exchange token")
-			return
-		}
+		// Use goroutines to handle token exchange and user information fetching concurrently
+		ch := make(chan *UserInfo)
+		errCh := make(chan error)
 
-		// Use the access token to fetch user information
-		userInfo, err := getUserInfo(token.AccessToken)
-		if err != nil {
-			c.String(500, "Failed to fetch user information")
-			return
-		}
+		go func() {
+			// Exchange the authorization code for tokens
+			token, err := oauth2Config.Exchange(c, code)
+			if err != nil {
+				errCh <- err
+				return
+			}
 
-		c.String(200, fmt.Sprintf("Token exchanged successfully. User: %+v", userInfo))
+			// Use the access token to fetch user information
+			userInfo, err := getUserInfo(token.AccessToken)
+			if err != nil {
+				errCh <- err
+				return
+			}
+
+			ch <- userInfo
+		}()
+
+		select {
+		case userInfo := <-ch:
+			aLock.Lock()
+			defer aLock.Unlock()
+
+			// Increment a for each new user
+			a++
+
+			// Storing Info in Redis
+			var info Info
+			info.Email = userInfo.Email
+			info.Name = userInfo.Name
+			jsonData, err := json.Marshal(info)
+			if err != nil {
+				panic(err)
+			}
+
+			log.Println(jsonData)
+
+			err = client.Set(userInfo.Email, string(jsonData), 0).Err()
+			if err != nil {
+				panic(err)
+			}
+
+			// Retrieving Info from Redis
+			val, err := client.Get(userInfo.Email).Result()
+			if err != nil {
+				panic(err)
+			}
+
+			var retrievedInfo Info
+			err = json.Unmarshal([]byte(val), &retrievedInfo)
+			if err != nil {
+				panic(err)
+			}
+
+			c.String(200, fmt.Sprintf("Token exchanged successfully. User: %+v", retrievedInfo))
+
+		case err := <-errCh:
+			c.String(500, fmt.Sprintf("Failed: %v", err))
+		}
 	})
 
 	router.Run(":3001")
