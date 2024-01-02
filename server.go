@@ -19,12 +19,12 @@ type UserInfo struct {
 }
 
 func main() {
-	const googleClientId = process.env.GOOGLE_CLIENT_ID;
-	const googleClientSecret = process.env.GOOGLE_SECRET;
+	const googleClientId = "864056163165-6kc1aphrn4hkb28rdb2b0fvr99psnpao.apps.googleusercontent.com";
+	const googleClientSecret = "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";
 	redirectURL := "http://localhost:3001/api/auth/google/callback"
 
 	oauth2Config := &oauth2.Config{
-		ClientID:     googleClientID,
+		ClientID:     googleClientId,
 		ClientSecret: googleClientSecret,
 		RedirectURL:  redirectURL,
 		Scopes:       []string{"profile", "email"},
