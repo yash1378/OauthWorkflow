@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go" // Import the jwt-go package
@@ -100,7 +101,7 @@ type Claims struct {
 
 func generateJWT(email string) (string, error) {
 	// Your secret key for signing the token
-	secretKey := []byte(process.env.SECRET_KEY)
+	secretKey := []byte(os.Getenv("SECRET_KEY"))
 
 	// Create a new JWT token with custom claims
 	claims := &Claims{
@@ -138,7 +139,7 @@ func JWTMiddleware() gin.HandlerFunc {
         // Parse and verify the JWT token
         claims := &Claims{}
         token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-            return []byte(process.env.SECRET_KEY), nil // Replace with your actual secret key
+            return []byte(os.Getenv("SECRET_KEY")), nil // Replace with your actual secret key
         })
 
         if err != nil {
@@ -168,13 +169,13 @@ func JWTMiddleware() gin.HandlerFunc {
 
 
 func main() {
-	googleClientId := process.env.GOOGLE_CLIENT_ID
-	googleClientSecret := process.env.GOOGLE_CLIENT_SECRET
+	googleClientId := os.Getenv("GOOGLE_CLIENT_ID")
+	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 	redirectURL := "http://localhost:3001/api/auth/google/callback"
 
 	client := redis.NewClient(&redis.Options{
-		Addr:     process.env.REDIS_URL,
-		Password: process.env.REDIS_PASSWORD, // no password set
+		Addr:     os.Getenv("REDIS_URL"),
+		Password: os.Getenv("REDIS_PASSWORD"), // no password set
 		DB:       0,  // use default DB
 	})
 
