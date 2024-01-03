@@ -486,7 +486,7 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "User data saved successfully"})
 	})
 
-	router.Run(":" + port)
+	router.Run("0.0.0.0:" + port)
 }
 
 // Function to fetch user information from Google using the access token
