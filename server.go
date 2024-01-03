@@ -171,7 +171,7 @@ func JWTMiddleware() gin.HandlerFunc {
 func main() {
 	googleClientId := os.Getenv("GOOGLE_CLIENT_ID")
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
-	redirectURL := "http://localhost:3001/api/auth/google/callback"
+	redirectURL := "https://jsgobackend.onrender.com/api/auth/google/callback"
 	// Use the PORT environment variable if set, or default to 3001
 	port := os.Getenv("PORT")
 	if port == "" {
