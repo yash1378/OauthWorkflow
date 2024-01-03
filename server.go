@@ -172,6 +172,11 @@ func main() {
 	googleClientId := os.Getenv("GOOGLE_CLIENT_ID")
 	googleClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
 	redirectURL := "http://localhost:3001/api/auth/google/callback"
+	// Use the PORT environment variable if set, or default to 3001
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3001"
+	}
 
 	client := redis.NewClient(&redis.Options{
 		Addr:     os.Getenv("REDIS_URL"),
@@ -481,7 +486,7 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "User data saved successfully"})
 	})
 
-	router.Run(":3001")
+	router.Run(":" + port)
 }
 
 // Function to fetch user information from Google using the access token
